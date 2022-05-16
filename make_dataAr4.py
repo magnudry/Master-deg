@@ -82,9 +82,9 @@ data_m.to_netcdf(outf + name + ".nc")
 #%%
 #Automate!
 contourlist = natsorted(glob.glob("/uio/hume/student-u71/magnudry/Documents/static_Ar4" + "/*.nc"))
-dynfolder = "/uio/hume/student-u71/magnudry/Documents/dyn_vort_Ar4/"
+dynfolder = "/uio/hume/student-u71/magnudry/Documents/dynamic_Ar4/"
 R_vals = np.array([0.5,1,1.5,2,2.5,5,10,15]) * 1e-4
-times = np.arange(0,1044) * 24*3600
+times = np.arange(0,1926) * 24*3600
 #%%
 #print(contourlist[9])
 dyn = dynfolder + "cont" + str(3) 
@@ -99,9 +99,9 @@ for x in range(len(contourlist)):
     L, H_m = normalisers(st)
     for y in range(len(R_vals)):
         R = R_vals[y]
-        t,u,v,s = circ_solve_v(st,dyn,times,24*3600,L,H_m,R)
+        t,u,s = circ_solve(st,dyn,times,24*3600,L,H_m,R)
         #merge and save
         name = "cont" + str(x) + "R" + str(R)
-        outf = "/uio/lagringshotell/geofag/students/metos/magnudry/Master/Arctic4_output_v/"
-        data_m = file_merger_v(t,u,v,s,name)
+        outf = "/uio/lagringshotell/geofag/students/metos/magnudry/Master/Arctic4_output_allconts/"
+        data_m = file_merger(t,u,s,name)
         data_m.to_netcdf(outf + name + ".nc")
