@@ -372,25 +372,73 @@ def file_merger(tau_circ, u_circ, stress, desc):
     merged = merged.assign_attrs(dict(description = desc))
     return merged
 
-def plotter(tau_c, u_c, s, days, basin, fonh, R):
-    fig,axs = plt.subplots(2,1, sharex = True, figsize = (8,10))
-    fig.suptitle("Circulation " + str(basin) + " fonh = " + str(fonh) + " R = "+ str(R))
-    axs[0].plot(days,-1*tau_c, label = "Calculated")
+def plotter(tau_c, u_c, s, days):
+    #fig,axs = plt.subplots(2,1, sharex = True, figsize = (8,10))
+    fig,axs = plt.subplots(2,1,sharex = True,gridspec_kw = {"height_ratios" : [3,1]},figsize=(8,6))
+    #fig.suptitle("Circulation " + str(basin) + " fonh = " + str(fonh) + " R = "+ str(R))
+    #fig.suptitle(inputname,fontsize = 25)
+    axs[0].plot(days,-1*tau_c, label = "Linear model")
     #axs[0].set_ylim(-0.02,0.01)
-    axs[0].set_title("Mean contour velocity [m/s]")
+    #axs[0].set_title("Mean contour velocity [m/s]", fontsize = 20)
     axs[0].grid(True)
-    axs[0].plot(days,-1*u_c, label = "Model velocity data")
-    axs[0].legend()
+    axs[0].set_ylabel(r"$u_{m}$ [m/s]", fontsize = 20)
+    axs[0].plot(days,-1*u_c, label = "ROMS velocity data")
+    axs[0].tick_params(labelsize = 15)
+    #axs[0].legend()
     #axs[1].set_ylim(-0.01,0.02)
     axs[1].plot(days,-1*s)
+    axs[1].tick_params(labelsize = 15)
+    axs[1].set_ylabel(r"$\tau_{m}$ [Pa]", fontsize = 20)
     axs[1].grid(True)
-    axs[1].set_title("Contour average surface stress [Pa]")
+    #axs[1].set_title("Contour average surface stress [Pa]", fontsize = 20)
     #if non arctic
     #axs[1].set_xlabel("days since 01.01.2012")
     #if arctic
-    axs[1].set_xlabel("days since 01.12.2013")
+    axs[1].set_xlabel("Days", fontsize = 20)
+    fig.tight_layout(rect = (0,0,1,1))
     return fig
 
+def plotter_v(tau_c, u_c, v_c, s, days, inputname): # basin, fonh, R):
+    fig,axs = plt.subplots(2,1, sharex = True, gridspec_kw = {"height_ratios" : [3,1]}, figsize = (8,6))
+    fig.suptitle(inputname,fontsize = "xx-large")
+    #fig.suptitle("Circulation " + str(basin) + " fonh = " + str(fonh) + " R = "+ str(R))
+    axs[0].plot(days,-1*tau_c, label = "Linear model")
+    #axs[0].set_ylim(-0.2,0.2)
+    axs[0].set_title("Mean contour velocity [m/s]",fontsize = "x-large")
+    axs[0].grid(True)
+    axs[0].plot(days,-1*u_c, label = "ROMS velocity data")
+    axs[0].plot(days,-1*v_c, label = "Vorticity fluxes")
+    #axs[0].plot(days,-1*tmv, label = "RHS total")
+    axs[0].plot(days,-1*tau_c - v_c, label = "RHS total")
+    #axs[0].legend()
+    #axs[1].set_ylim(-0.01,0.02)
+    axs[1].plot(days,-1*s)
+    axs[1].grid(True)
+    axs[1].set_title("Contour average surface stress [Pa]",fontsize = "x-large")
+    axs[1].set_xlabel("days since 01.05.2016",fontsize = "large")
+    fig.tight_layout(rect = (0,0,1,0.95))
+    return fig
+#function for a reduced plot of circulation
+"""
+def plotter_red(tau_c, u_c, s, days, inputname):
+    fig,axs = plt.subplots(2,1,sharex = True,gridspec_kw = {"height_ratios" : [3,1]},figsize=(8,6))
+    ax.set_title(inputname)
+    twin = ax.twinx()
+    pt, = twin.plot(days,-1*s,alpha = 0.4,color = "g")
+    ax.plot(days,-1*tau_c, label = "Linear model")
+    ax.plot(days,-1*u_c, label = "ROMS velocity data")
+    ax.set_ylabel("Contour average velocity [m/s]")
+    ax.set_xlabel("days since 01.12.2013")
+    ax.grid(True) 
+    ax.legend()
+    #pt = twin.plot(days,-1*s, label = "Surface stress",alpha = 0.4)
+    twin.grid(True)
+    twin.yaxis.label.set_color(pt.get_color())
+    twin.tick_params(axis='y', colors=pt.get_color())
+    twin.set_ylabel("Surface stress [Pa]")
+    fig.set_tight_layout(True)
+    return fig
+"""
 #alternative variant of conts data that also includes the vorticity fluxes for a contour
 def conts_data_v(cdir, vdir, grid, regrx, regry, folder):
     vfiles = sorted(glob.glob(vdir + "/*.nc")) #list of files w/ velocity data
@@ -436,7 +484,7 @@ def conts_data_v(cdir, vdir, grid, regrx, regry, folder):
             #write to (local) disk
             curr_set.to_netcdf(("{}{}{}{}{}{}{}{}".format(folder,"/cont",str(j),"/cont",str(j),"t_step",str(nr),".nc")))
     return
-#same alternative veriant for circ solve, that also solves for the vorticity flux
+#same alternative variant for circ solve, that also solves for the vorticity flux
 def circ_solve_v(cont_file, vel_dir, t_arr, delta_t, L, H_m, R):
     #open static dataset
     cont_data = xr.open_dataset(cont_file)
@@ -459,14 +507,16 @@ def circ_solve_v(cont_file, vel_dir, t_arr, delta_t, L, H_m, R):
         if first:
             stress_set = stress_da.sum(dim = "nz") / L.data
             #include option to initialise tau-sum with u-data
-            tau_iter = u_da.sum(dim = "nz")
-            tau_circ = u_da.sum(dim = "nz") * norm
-            #tau_iter = tau_da.sum(dim = "nz") #must make two separate tau_arrays to be able to multiply in norm correctly
-            #tau_circ = tau_da.sum(dim = "nz") * 
+            #tau_iter = u_da.sum(dim = "nz")
+            #tau_circ = u_da.sum(dim = "nz") * norm
+            tau_iter = tau_da.sum(dim = "nz") #must make two separate tau_arrays to be able to multiply in norm correctly
+            tau_circ = tau_da.sum(dim = "nz") * norm
             #could hard code the initial vorticity contribution to zero if tau_circ is initialised with u_0
             vort_iter = vort_da.sum(dim = "nz")
             vort_circ = vort_da.sum(dim = "nz") * norm
             u_circ = u_da.sum(dim = "nz") * norm
+            tpv = u_da.sum(dim = "nz") * norm
+            tmv = u_da.sum(dim = "nz") * norm
             first = False
         else:
             stress_set = xr.concat([stress_set,stress_da.sum(dim = "nz") / L.data], dim = "t_step")
@@ -477,19 +527,22 @@ def circ_solve_v(cont_file, vel_dir, t_arr, delta_t, L, H_m, R):
             vort_iter += vort_da.sum(dim = "nz")
             vort_circ = xr.concat([vort_circ, vort_iter * norm], dim = "t_step")
             u_circ = xr.concat([u_circ, u_da.sum(dim = "nz") * norm], dim = "t_step")
+            tpv = xr.concat([tpv, (tau_iter + vort_iter) * norm], dim = "t_step")
+            tmv = xr.concat([tmv, (tau_iter - vort_iter) * norm], dim = "t_step")
     #tau_circ = tau_circ.cumsum(dim = "t_step")
-    return tau_circ, u_circ, vort_circ, stress_set
-
-def plotter_v(tau_c, u_c, v_c, s, days, basin, fonh, R):
+    return tau_circ, u_circ, vort_circ, tpv, tmv, stress_set
+"""
+def plotter_v(tau_c, u_c, v_c, s, days, inputname): # basin, fonh, R):
     fig,axs = plt.subplots(2,1, sharex = True, figsize = (8,10))
-    fig.suptitle("Circulation " + str(basin) + " fonh = " + str(fonh) + " R = "+ str(R))
+    fig.suptitle(inputname)
+    #fig.suptitle("Circulation " + str(basin) + " fonh = " + str(fonh) + " R = "+ str(R))
     axs[0].plot(days,-1*tau_c, label = "Calculated tau contr")
     #axs[0].set_ylim(-0.2,0.2)
     axs[0].set_title("Mean contour velocity [m/s]")
     axs[0].grid(True)
     axs[0].plot(days,-1*u_c, label = "Model velocity data")
-    axs[0].plot(days,-1*v_c, label = "Vorticity fluxes")
-    axs[0].plot(days,-1*tau_c - v_c, label = "RHS total")
+    axs[0].plot(days,v_c, label = "Vorticity fluxes")
+    axs[0].plot(days,-1*tau_c + v_c, label = "RHS total")
     axs[0].legend()
     #axs[1].set_ylim(-0.01,0.02)
     axs[1].plot(days,-1*s)
@@ -497,8 +550,8 @@ def plotter_v(tau_c, u_c, v_c, s, days, basin, fonh, R):
     axs[1].set_title("Contour average surface stress [Pa]")
     axs[1].set_xlabel("days since 01.05.2016")
     return fig
-
-def file_merger_v(tau_circ, u_circ, v_circ, stress, desc):
+"""
+def file_merger_v(tau_circ, u_circ, v_circ, tpv, tmv, stress, desc):
     #extract coords
     oc_t = stress.coords["ocean_time"]
     t_st = stress.coords["t_step"]
@@ -507,8 +560,57 @@ def file_merger_v(tau_circ, u_circ, v_circ, stress, desc):
     n_tau = n_tau.to_dataset(name = "tau_circ")
     n_vort = xr.DataArray(data = v_circ.data, dims = ["t_step"], coords = dict(ocean_time = (["t_step"], oc_t), t_step = t_st))
     n_vort = n_vort.to_dataset(name = "v_circ")
+    n_tpv = xr.DataArray(data = tpv.data, dims = ["t_step"], coords = dict(ocean_time = (["t_step"], oc_t), t_step = t_st))
+    n_tpv = n_tpv.to_dataset(name = "tpv")
+    n_tmv = xr.DataArray(data = tmv.data, dims = ["t_step"], coords = dict(ocean_time = (["t_step"], oc_t), t_step = t_st))
+    n_tmv = n_tmv.to_dataset(name = "tmv")
     u_circ = u_circ.to_dataset(name = "u_circ")
     stress = stress.to_dataset(name = "stress")
-    merged = xr.merge([n_tau,u_circ,n_vort,stress])
+    merged = xr.merge([n_tau,u_circ,n_vort,stress,n_tpv,n_tmv])
     merged = merged.assign_attrs(dict(description = desc))
     return merged
+
+#Function for calculating each term in equation Stokes (3.5)
+def term_solver(cont_file,vel_dir,delta_t,R):
+    #open static dataset
+    cont_data = xr.open_dataset(cont_file)
+    #list of velocity files
+    #vel_arr = glob.glob(vel_dir + "/*.nc")
+    vel_arr = natsorted(glob.glob(vel_dir + "/*.nc"))
+    first = True
+    for i in range(len(vel_arr)):
+        vel = xr.open_dataset(vel_arr[i])
+        vel = vel.isel(contour = 0, t_step = 0)
+        if i == 0:
+            unmo = vel["contu"]
+            vnmo = vel["contv"]
+            continue
+        deru = (vel["contu"] - unmo) / delta_t
+        derv = (vel["contv"] - vnmo) / delta_t 
+        t1 = (deru[1:] * cont_data["contx"].diff(dim = "nz") * cont_data["distx"][1:] + 
+              derv[1:] * cont_data["conty"].diff(dim = "nz") * cont_data["disty"][1:])
+        t2 = vel["contz"][1:] * (vel["contu"][1:] * cont_data["conty"].diff(dim = "nz") * cont_data["disty"][1:] -
+                                 vel["contv"][1:] * cont_data["contx"].diff(dim = "nz") * cont_data["distx"][1:])
+        t3 = (1 / (rho_o * cont_data["depth"][1:])) * (vel["conttx"][1:] * cont_data["contx"].diff(dim = "nz") * cont_data["distx"][1:] +
+                                                       vel["contty"][1:] * cont_data["conty"].diff(dim = "nz") * cont_data["disty"][1:])
+        t4 = (R / (cont_data["depth"][1:])) * (vel["contu"][1:] * cont_data["contx"].diff(dim = "nz") * cont_data["distx"][1:] +
+                                               vel["contv"][1:] * cont_data["conty"].diff(dim = "nz") * cont_data["disty"][1:])
+        if first:
+            der_arr = t1.sum(dim = "nz")
+            vort_arr = t2.sum(dim = "nz")
+            tau_arr = t3.sum(dim = "nz")
+            R_arr = t4.sum(dim = "nz")
+            first = False
+        else:
+            der_arr = xr.concat([der_arr, t1.sum(dim = "nz")], dim = "t_step")
+            vort_arr = xr.concat([vort_arr, t2.sum(dim = "nz")], dim = "t_step")
+            tau_arr = xr.concat([tau_arr, t3.sum(dim = "nz")], dim = "t_step")
+            R_arr = xr.concat([R_arr, t4.sum(dim = "nz")], dim = "t_step")    
+        unmo = vel["contu"]
+        vnmo = vel["contv"]
+    der_set = der_arr.to_dataset(name = "term1")
+    vort_set = vort_arr.to_dataset(name = "term2")
+    tau_set = tau_arr.to_dataset(name = "term3")
+    R_set = R_arr.to_dataset(name = "term4")
+    finished = xr.merge([der_set,vort_set,tau_set,R_set])
+    return finished
