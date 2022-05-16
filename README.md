@@ -1,2 +1,2 @@
 # Master-deg
-Any code created for the master's degree.
+Any code and data created for the master's degree.
